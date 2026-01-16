@@ -73,6 +73,9 @@ analysis <- function(rawdata) {
   # Calculate steadystate_norm = steadystate - R0
   coefs[, steadystate_norm := steadystate - R0]
 
+  # Calculate Asym_norm = Asym - R0
+  coefs[, Asym_norm := Asym - R0]
+
   # Update steadystates to include the normalized value
   steadystates <- coefs[, .(Section, col_type, steadystate, steadystate_norm)]
 
