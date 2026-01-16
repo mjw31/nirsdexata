@@ -349,20 +349,24 @@ interact_rawdata_server <- function(input, output, session,
       coefs <- mod$coefs %>%
         filter(col_type == "HBO", Section %in% c("Rest1", "Rest2", "Rest3")) %>%
         summarise(
-          Asym        = mean(Asym, na.rm = TRUE),
-          R0          = mean(R0, na.rm = TRUE),
-          lrc         = mean(lrc, na.rm = TRUE),
-          Tau         = mean(Tau, na.rm = TRUE),
-          steadystate = mean(steadystate, na.rm = TRUE)
+          Asym             = mean(Asym, na.rm = TRUE),
+          Asym_norm        = mean(Asym_norm, na.rm = TRUE),
+          R0               = mean(R0, na.rm = TRUE),
+          lrc              = mean(lrc, na.rm = TRUE),
+          Tau              = mean(Tau, na.rm = TRUE),
+          steadystate      = mean(steadystate, na.rm = TRUE),
+          steadystate_norm = mean(steadystate_norm, na.rm = TRUE)
         )
       newSum <- data.frame(
         ID = as.numeric(subjID()),
         Cycle_number = as.numeric(cycleNumber()),
         Asym = coefs$Asym,
+        Asym_norm = coefs$Asym_norm,
         R0 = coefs$R0,
         lrc = coefs$lrc,
         Tau = coefs$Tau,
         steadystate = coefs$steadystate,
+        steadystate_norm = coefs$steadystate_norm,
         Name = paste0("id", subjID(), "c", cycleNumber()),
         stringsAsFactors = FALSE
       )
@@ -382,10 +386,12 @@ globalSummaryData <- reactiveVal(data.frame(
   ID = numeric(),
   Cycle_number = numeric(),
   Asym = numeric(),
+  Asym_norm = numeric(),
   R0 = numeric(),
   lrc = numeric(),
   Tau = numeric(),
   steadystate = numeric(),
+  steadystate_norm = numeric(),
   Name = character(),
   stringsAsFactors = FALSE
 ))
@@ -407,7 +413,20 @@ generate_patient_plot <- function(pid, summary_df) {
   curves_list <- lapply(seq_len(nrow(patient_df)), function(i) {
     row <- patient_df[i, ]
     x_vals <- seq(0, 120, length.out = 500)
-    y_vals <- asym_regression_normalized(x_vals, row$Asym, row$R0, row$lrc)
+    # y_vals <- asym_regression_normalized(x_vals, row$Asym, row$R0, row$lrc)
+    # Use Asym_norm directly: y_norm = Asym_norm * (1 - exp(-exp(lrc)*t))
+    # We can reconstruct it or use the helper if we pass Asym_norm as Asym and 0 as R0?
+    # asym_regression_normalized splits Asym and R0.
+    # Logic: y = Asym + (R0-Asym)exp(...)
+    # y_norm = y - R0.
+    # If we want to use Asym_norm, we know Asym_norm = Asym - R0.
+    # So y_norm = (Asym_norm + R0) + (R0 - (Asym_norm + R0))exp(...) - R0
+    #           = Asym_norm + R0 - Asym_norm * exp(...) - R0
+    #           = Asym_norm * (1 - exp(...))
+
+    # Let's write the formula directly for clarity
+    y_vals <- row$Asym_norm * (1 - exp(-exp(row$lrc) * x_vals))
+
     data.frame(x = x_vals, y = y_vals, Cycle = row$Cycle_number)
   })
   curve_data <- bind_rows(curves_list)
@@ -416,8 +435,8 @@ generate_patient_plot <- function(pid, summary_df) {
     transmute(
       Cycle = Cycle_number,
       x = Tau,
-      y = asym_regression(Tau, Asym, R0, lrc) -
-        asym_regression(0, Asym, R0, lrc)
+      # y at Tau is Asym_norm * (1 - exp(-1)) = Asym_norm * (1 - 0.368) = Asym_norm * 0.632
+      y = Asym_norm * (1 - exp(-1))
     )
 
 
