@@ -5,3 +5,12 @@ inst/doc
 .httr-oauth
 .DS_Store
 .quarto
+
+# Python and Web (local dev only)
+python/
+web/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+temp_uploads/
