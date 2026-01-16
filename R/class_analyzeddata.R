@@ -70,6 +70,12 @@ analysis <- function(rawdata) {
   coefs <- tidy[, .(Section, col_type, Asym, R0, lrc)][, Tau := (1 / exp(lrc))] |>
     merge(y = steadystates)
 
+  # Calculate steadystate_norm = steadystate - R0
+  coefs[, steadystate_norm := steadystate - R0]
+
+  # Update steadystates to include the normalized value
+  steadystates <- coefs[, .(Section, col_type, steadystate, steadystate_norm)]
+
   # Prepare augmented predictions and residuals
   augment <- unnest_dt(asym_models,
     col = Augment,
